@@ -1,5 +1,7 @@
 import aiohttp
 import asyncio
+from russelCache.russelExceptions import CacheClientError
+
 
 class ApiResponse:
     def __init__(self, is_success, data):
@@ -18,6 +20,7 @@ class ApiResponse:
             return bytes(self.data).decode('utf-8')
         return self.data
 
+
 class RusselClient:
     def __init__(self, base_url):
         self.base_url = base_url
@@ -25,7 +28,7 @@ class RusselClient:
     async def _handle_response(self, response):
         if response.status != 200:
             data = await response.json()
-            raise Exception(data.get("data", "Unknown error"))
+            raise CacheClientError(data.get("data", "Unknown error"))
         data = await response.json()
         return ApiResponse.from_dict(data)
 
@@ -42,4 +45,20 @@ class RusselClient:
             async with session.get(url) as response:
                 return await self._handle_response(response)
 
-    # Other methods like delete, clear_cluster, etc., would follow the same pattern
+    async def delete(self, cluster, key):
+        url = f"{self.base_url}/api/delete/{cluster}/{key}"
+        async with aiohttp.ClientSession() as session:
+            async with session.delete(url) as response:
+                return await self._handle_response(response)
+
+    async def clear_cluster(self, cluster):
+        url = f"{self.base_url}/api/clear_cluster/{cluster}"
+        async with aiohttp.ClientSession() as session:
+            async with session.delete(url) as response:
+                return await self._handle_response(response)
+
+    async def set_cluster(self, cluster):
+        url = f"{self.base_url}/api/set_cluster/{cluster}"
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url) as response:
+                return await self._handle_response(response)
